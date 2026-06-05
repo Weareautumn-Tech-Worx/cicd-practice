@@ -1,0 +1,56 @@
+name: Deploy Node.js to EC2
+
+# TRIGGER: Run this pipeline when code is
+# pushed to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    # Use a fresh Ubuntu machine provided by GitHub
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # STEP A: Download your code onto the runner
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # STEP B: Install Node.js on the runner
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # STEP C: Install dependencies on the runner
+      - name: Install dependencies
+        run: npm ci
+
+      # STEP D: Run your tests (if any)
+      # Pipeline STOPS here if tests fail = no bad deploy
+      - name: Run tests
+        run: npm test
+
+      # STEP E: SSH into EC2 and run deploy commands
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Pull latest code from GitHub
+            cd /home/ubuntu/app
+            git pull origin main
+
+            # Install any new/updated dependencies
+            npm install --production
+
+            # Restart the app with zero downtime
+            pm2 restart myapp
+
+            # Optional: show last 10 log lines
+            pm2 logs myapp --lines 10 --nostream
