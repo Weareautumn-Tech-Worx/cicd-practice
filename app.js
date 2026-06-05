@@ -10,7 +10,7 @@ app.use(express.json());
 // Routes
 app.get('/', (req, res) => {
   res.json({
-    message: 'Server is running 🚀',
+    message: 'Server is running and now cicd pipeline was working 🚀',
     status: 'success'
   });
 });
