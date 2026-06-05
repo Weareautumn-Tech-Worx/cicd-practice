@@ -1,4 +1,4 @@
-```yaml
+
 name: Deploy Node.js to EC2
 
 # Trigger the workflow when code is pushed to the main branch
@@ -41,4 +41,4 @@ jobs:
             npm install --production
             pm2 restart myapp || pm2 start app.js --name myapp
             pm2 save
-```
+
