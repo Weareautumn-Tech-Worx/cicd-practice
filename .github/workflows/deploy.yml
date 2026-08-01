@@ -62,9 +62,11 @@ jobs:
       packages: write
 
     steps:
+      # Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Login to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -72,7 +74,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      # Build and push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -82,51 +85,91 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
 
   deploy:
-  needs: build-and-push
-  runs-on: ubuntu-latest
+    needs: build-and-push
+    runs-on: ubuntu-latest
 
-  steps:
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
+    steps:
+      # Deploy Docker container to EC2
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
 
-        script: |
-          set -e
+          script: |
+            set -e
 
-          echo "Logging into GitHub Container Registry..."
+            echo "======================================"
+            echo "Starting Docker deployment..."
+            echo "======================================"
 
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-            -u "${{ github.actor }}" \
-            --password-stdin
+            echo "Logging into GitHub Container Registry..."
 
-          echo "Pulling latest image..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+              -u "${{ github.actor }}" \
+              --password-stdin
 
-          docker pull ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
+            echo "======================================"
+            echo "Pulling Docker image..."
+            echo "======================================"
 
-          echo "Checking port 3000..."
+            docker pull ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
 
-          sudo ss -ltnp 'sport = :3000' || true
+            echo "======================================"
+            echo "Current Docker containers:"
+            echo "======================================"
 
-          echo "Stopping old app container..."
+            docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}" || true
 
-          docker stop app || true
-          docker rm app || true
+            echo "======================================"
+            echo "Checking port 3000 before deployment..."
+            echo "======================================"
 
-          echo "Checking port 3000 after removing app..."
+            sudo ss -ltnp 'sport = :3000' || true
 
-          sudo ss -ltnp 'sport = :3000' || true
+            echo "======================================"
+            echo "Stopping existing container named app..."
+            echo "======================================"
 
-          echo "Starting new container..."
+            docker stop cicd || true
+            docker rm cicd || true
 
-          docker run -d \
-            --name app \
-            --restart unless-stopped \
-            -p 3000:3000 \
-            ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
+            echo "======================================"
+            echo "Checking if any Docker container is using port 3000..."
+            echo "======================================"
 
-          echo "Deployment completed successfully!"
+            docker ps --format '{{.ID}}\t{{.Names}}\t{{.Ports}}' | grep '0.0.0.0:3000' || true
 
-          docker ps
+            echo "======================================"
+            echo "Checking port 3000 after stopping app..."
+            echo "======================================"
+
+            sudo ss -ltnp 'sport = :3000' || true
+
+            echo "======================================"
+            echo "Starting new Docker container..."
+            echo "======================================"
+
+            docker run -d \
+              --name cicd \
+              --restart unless-stopped \
+              -p 3000:3000 \
+              ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
+
+            echo "======================================"
+            echo "Container started successfully"
+            echo "======================================"
+
+            echo "Container status:"
+            docker ps --filter "name=cicd"
+
+            echo "======================================"
+            echo "Container logs:"
+            echo "======================================"
+
+            docker logs --tail 50 cicd
+
+            echo "======================================"
+            echo "Deployment completed successfully!"
+            echo "======================================"
