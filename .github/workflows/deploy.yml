@@ -62,11 +62,9 @@ jobs:
       packages: write
 
     steps:
-      # Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Login to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -74,8 +72,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build and push Docker image
-      - name: Build and push Docker image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -89,7 +86,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Deploy Docker container to EC2
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -98,55 +94,15 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
 
           script: |
-            set -e
-
-            echo "======================================"
-            echo "Starting Docker deployment..."
-            echo "======================================"
-
-            echo "Logging into GitHub Container Registry..."
-
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-            -u "${{ github.actor }}" \
-            --password-stdin
-
-            echo "======================================"
-            echo "Pulling Docker image..."
-            echo "======================================"
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
             docker pull ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
 
-            echo "======================================"
-            echo "Stopping existing container named cicd..."
-            echo "======================================"
+            docker stop app || true
+            docker rm app || true
 
-            docker stop cicd || true
-            docker rm cicd || true
-
-            echo "======================================"
-            echo "Killing any process using port 3000..."
-            echo "======================================"
-
-            sudo fuser -k 3000/tcp || true
-            sleep 2  # Give the port time to be released
-
-            echo "======================================"
-            echo "Starting new Docker container..."
-            echo "======================================"
-
-              docker run -d \
-              --name cicd \
+            docker run -d \
+              --name app \
               --restart unless-stopped \
               -p 3000:3000 \
-               ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
-
-              echo "======================================"
-              echo "Container started successfully"
-              echo "======================================"
-
-              docker ps --filter "name=cicd"
-              docker logs --tail 50 cicd
-
-             echo "======================================"
-             echo "Deployment completed successfully!"
-             echo "======================================"
+              ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
