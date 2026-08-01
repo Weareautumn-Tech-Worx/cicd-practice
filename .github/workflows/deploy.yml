@@ -107,8 +107,8 @@ jobs:
             echo "Logging into GitHub Container Registry..."
 
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-              -u "${{ github.actor }}" \
-              --password-stdin
+            -u "${{ github.actor }}" \
+            --password-stdin
 
             echo "======================================"
             echo "Pulling Docker image..."
@@ -117,59 +117,36 @@ jobs:
             docker pull ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
 
             echo "======================================"
-            echo "Current Docker containers:"
-            echo "======================================"
-
-            docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}" || true
-
-            echo "======================================"
-            echo "Checking port 3000 before deployment..."
-            echo "======================================"
-
-            sudo ss -ltnp 'sport = :3000' || true
-
-            echo "======================================"
-            echo "Stopping existing container named app..."
+            echo "Stopping existing container named cicd..."
             echo "======================================"
 
             docker stop cicd || true
             docker rm cicd || true
 
             echo "======================================"
-            echo "Checking if any Docker container is using port 3000..."
+            echo "Killing any process using port 3000..."
             echo "======================================"
 
-            docker ps --format '{{.ID}}\t{{.Names}}\t{{.Ports}}' | grep '0.0.0.0:3000' || true
-
-            echo "======================================"
-            echo "Checking port 3000 after stopping app..."
-            echo "======================================"
-
-            sudo ss -ltnp 'sport = :3000' || true
+            sudo fuser -k 3000/tcp || true
+            sleep 2  # Give the port time to be released
 
             echo "======================================"
             echo "Starting new Docker container..."
             echo "======================================"
 
-            docker run -d \
+              docker run -d \
               --name cicd \
               --restart unless-stopped \
               -p 3000:3000 \
-              ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
+               ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
 
-            echo "======================================"
-            echo "Container started successfully"
-            echo "======================================"
+              echo "======================================"
+              echo "Container started successfully"
+              echo "======================================"
 
-            echo "Container status:"
-            docker ps --filter "name=cicd"
+              docker ps --filter "name=cicd"
+              docker logs --tail 50 cicd
 
-            echo "======================================"
-            echo "Container logs:"
-            echo "======================================"
-
-            docker logs --tail 50 cicd
-
-            echo "======================================"
-            echo "Deployment completed successfully!"
-            echo "======================================"
+             echo "======================================"
+             echo "Deployment completed successfully!"
+             echo "======================================"
