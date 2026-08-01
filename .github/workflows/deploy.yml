@@ -1,4 +1,3 @@
-
 name: Deploy Node.js to EC2
 
 # Trigger the workflow when code is pushed to the main branch
@@ -21,8 +20,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       # Install dependencies
       - name: Install dependencies
@@ -36,11 +35,10 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-           export NVM_DIR="$HOME/.nvm"
-           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            cd ~/cicd-practice
-            git pull origin main
-            npm install
-            pm2 restart app || pm2 start app.js --name app
-            pm2 save
-
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+             cd ~/cicd-practice
+             git pull origin main
+             npm install
+             pm2 restart cicd-practice || pm2 start app.js --name cicd-practice
+             pm2 save
