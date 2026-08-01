@@ -98,9 +98,9 @@ jobs:
 
             docker pull ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
 
-            # Stop/remove the container named "app" if it exists
-            docker stop app || true
-            docker rm app || true
+            # Stop/remove the container named "cicd" if it exists
+            docker stop cicd || true
+            docker rm cicd || true
 
             # Stop/remove ANY other container publishing host port 3000
             ids=$(docker ps --format '{{.ID}} {{.Ports}}' | awk -v p=':3000' '$0~p{print $1}')
@@ -111,7 +111,7 @@ jobs:
             fi
 
             docker run -d \
-              --name app \
+              --name cicd \
               --restart unless-stopped \
               -p 3000:3000 \
               ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
