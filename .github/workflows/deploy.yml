@@ -51,14 +51,16 @@ on:
       - main
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/cicd-practice
+  IMAGE_NAME: ghcr.io/weareautumn-tech-worx/cicd-practice
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
-      packages: write # required to push to GHCR
+      packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,7 +70,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # auto-provided, no setup needed
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -80,8 +82,9 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
 
   deploy:
-    needs: build-and-push # waits for the build job to finish first
+    needs: build-and-push
     runs-on: ubuntu-latest
+
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -89,13 +92,17 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+
           script: |
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/${{ github.repository_owner }}/cicd-practice:${{ github.sha }}
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            docker pull ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
+
             docker stop app || true
             docker rm app || true
+
             docker run -d \
               --name app \
               --restart unless-stopped \
               -p 3000:3000 \
-              ghcr.io/${{ github.repository_owner }}/cicd-practice:${{ github.sha }}
+              ghcr.io/weareautumn-tech-worx/cicd-practice:${{ github.sha }}
