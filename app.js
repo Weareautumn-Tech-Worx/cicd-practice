@@ -10,7 +10,7 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.json({
     message:
-      "Server is running and now cicd pipeline was done with the docker🚀 #jainam",
+      "Server is running and now cicd pipeline was done with the docker🚀 #AutumnTechWorx",
     status: "success",
   });
 });
